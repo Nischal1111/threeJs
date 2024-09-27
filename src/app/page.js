@@ -1,21 +1,69 @@
-"use client";
-import React, { useRef, useCallback, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, useGLTF, Text } from '@react-three/drei';
+"use client"
+import React, { useRef, useCallback, Suspense, useState, useEffect } from 'react';
+import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
+import { OrbitControls, useGLTF, PerspectiveCamera, Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
 
 function Model({ url }) {
   const { scene } = useGLTF(url);
   return <primitive object={scene} />;
 }
 
+function Lamp({ focusOnLamp }) {
+  const { scene } = useGLTF('/titanic_lamp/scene.gltf');
+  const lampRef = useRef();
+
+
+  return (
+    <primitive 
+      ref={lampRef}
+      object={scene} 
+      scale={[0.01, 0.01, 0.01]} // Adjust scale as needed
+      position={[-1.3, 0, 2.3]} // Adjusted position to opposite corner on the floor
+      rotation={[0, Math.PI / 4, 0]} // Adjusted rotation
+    />
+  );
+}
+
+function Text3D({ text, position, rotation }) {
+  const font = useLoader(FontLoader, '/fonts/Tektur_Regular.json');
+  const meshRef = useRef();
+
+  useEffect(() => {
+    if (font) {
+      const geometry = new TextGeometry(text, {
+        font: font,
+        size: 0.15,
+        height: 0.02,
+        color:"black",
+        curveSegments: 12,
+        bevelThickness: 0.01,
+        bevelEnabled: false,
+      });
+      geometry.center();
+      meshRef.current.geometry = geometry;
+    }
+  }, [font, text]);
+
+  return (
+    <mesh ref={meshRef} position={position} rotation={rotation}>
+      <meshStandardMaterial color="white" /> // Changed color to white for contrast
+    </mesh>
+  );
+}
+
 function Room() {
-  const controlsRef = useRef();
-  const { camera } = useThree();
+  const roomControlsRef = useRef();
+  const lampControlsRef = useRef();
+  const [focusOnLamp, setFocusOnLamp] = useState(false);
+  const { camera, gl } = useThree();
 
   const handleWheel = useCallback(
     (event) => {
-      if (controlsRef.current) {
+      const activeControls = focusOnLamp ? lampControlsRef.current : roomControlsRef.current;
+      if (activeControls) {
         const zoomSpeed = 0.1;
         const direction = new THREE.Vector3();
         camera.getWorldDirection(direction);
@@ -25,49 +73,108 @@ function Room() {
           .multiplyScalar(event.deltaY < 0 ? zoomSpeed : -zoomSpeed);
 
         camera.position.add(moveVector);
-        camera.position.y = Math.max(camera.position.y, 1); // Limit Y to prevent zooming too low
+        camera.position.y = Math.max(camera.position.y, 1);
 
-        controlsRef.current.target.copy(camera.position).add(direction);
+        activeControls.target.copy(camera.position).add(direction);
       }
     },
-    [camera]
+    [camera, focusOnLamp]
   );
 
   useFrame(() => {
-    if (controlsRef.current) {
-      // You can define additional constraints for the camera's controls here
-      controlsRef.current.minDistance = 0.5; // Allow zooming closer to walls
-      controlsRef.current.maxDistance = 4;   // Maximum zoom out distance
+    if (roomControlsRef.current) {
+      roomControlsRef.current.minDistance = 0.5;
+      roomControlsRef.current.maxDistance = 4;
+    }
+    if (lampControlsRef.current) {
+      lampControlsRef.current.minDistance = 0.5;
+      lampControlsRef.current.maxDistance = 2;
     }
   });
+
+  const toggleFocus = () => {
+    setFocusOnLamp(!focusOnLamp);
+    if (!focusOnLamp) {
+      // Focus on lamp
+      camera.position.set(-2.8, 1.7, 1.8);
+      lampControlsRef.current.target.set(-1.3, 0, 2.3);
+    } else {
+      // Focus on room
+      camera.position.set(0, 1.5, 5);
+      roomControlsRef.current.target.set(0, 1.5, 0);
+    }
+  };
 
   return (
     <>
       <Model url="/room/scene.gltf" />
-      <Text
+      <Lamp focusOnLamp={focusOnLamp} />
+      <Text3D 
+        text="Hello, I am Nischal and"
         position={[2.5, 2, 0]}
-        rotation={[0, -Math.PI / 2, 0]}
-        color="black"
-        fontSize={0.2}
-        maxWidth={2}
-        textAlign="center"
-      >
-        Hello, I am Nischal and this is my room.
-      </Text>
+        rotation={[0, -Math.PI / 2, 0]} // Changed rotation to face the opposite direction
+      />
+      <Text3D 
+        text="This is my room."
+        position={[2.5, 1.5, 0]}
+        rotation={[0, -Math.PI / 2, 0]} // Changed rotation to face the opposite direction
+      />
       <OrbitControls
-        ref={controlsRef}
+        ref={roomControlsRef}
         rotateSpeed={0.5}
-        target={[0, 1.5, 0]} // Set target in the center of the room
-        minPolarAngle={Math.PI / 3.5} // Minimum view angle (allows looking slightly downward)
-        maxPolarAngle={Math.PI / 1.8} // Maximum view angle (allows looking slightly upward)
-        minDistance={0.5} // Minimum zoom distance (allows zooming into walls)
-        maxDistance={4} // Maximum zoom distance (allows zooming out further)
+        target={[0, 1.5, 0]}
+        minPolarAngle={Math.PI / 3.5}
+        maxPolarAngle={Math.PI / 1.8}
+        minDistance={0.5}
+        maxDistance={4}
+        enabled={!focusOnLamp}
+      />
+      <OrbitControls
+        ref={lampControlsRef}
+        rotateSpeed={0.5}
+        target={[-1.3, 0, 2.3]} // Updated target to lamp position
+        minPolarAngle={0}
+        maxPolarAngle={Math.PI}
+        minDistance={0.5}
+        maxDistance={2}
+        enabled={focusOnLamp}
       />
       <primitive object={camera} onWheel={handleWheel} />
       
       <ambientLight intensity={0.5} />
       <directionalLight position={[5, 5, 5]} intensity={2} />
       <pointLight position={[-5, 3, -5]} intensity={0.5} />
+
+      <Html
+        as='div'
+        center
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: '100%',
+          height: '100%'
+        }}
+      >
+        <button 
+          onClick={toggleFocus} 
+          style={{
+            padding: '5px 10px',
+            fontSize: '12px',
+            backgroundColor: focusOnLamp ? '#ff4136' : '#0074D9',
+            color: 'white',
+            border: 'none',
+            borderRadius: '15px',
+            cursor: 'pointer',
+            opacity: 0.7,
+            transition: 'opacity 0.3s'
+          }}
+          onMouseEnter={(e) => e.target.style.opacity = 1}
+          onMouseLeave={(e) => e.target.style.opacity = 0.7}
+        >
+          {focusOnLamp ? 'Room' : 'Lamp'}
+        </button>
+      </Html>
     </>
   );
 }
@@ -83,3 +190,7 @@ export default function Home() {
     </div>
   );
 }
+
+// Preload models
+useGLTF.preload('/room/scene.gltf');
+useGLTF.preload('/lamp/scene.gltf');
