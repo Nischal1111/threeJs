@@ -15,14 +15,13 @@ function Lamp({ focusOnLamp }) {
   const { scene } = useGLTF('/titanic_lamp/scene.gltf');
   const lampRef = useRef();
 
-
   return (
     <primitive 
       ref={lampRef}
       object={scene} 
       scale={[0.01, 0.01, 0.01]} // Adjust scale as needed
-      position={[-1.3, 0, 2.3]} // Adjusted position to opposite corner on the floor
-      rotation={[0, Math.PI / 4, 0]} // Adjusted rotation
+      position={[-4.7, -1, 2.5]}
+      rotation={[0, 0, 0]} // Reset rotation
     />
   );
 }
@@ -37,7 +36,6 @@ function Text3D({ text, position, rotation }) {
         font: font,
         size: 0.15,
         height: 0.02,
-        color:"black",
         curveSegments: 12,
         bevelThickness: 0.01,
         bevelEnabled: false,
@@ -49,7 +47,7 @@ function Text3D({ text, position, rotation }) {
 
   return (
     <mesh ref={meshRef} position={position} rotation={rotation}>
-      <meshStandardMaterial color="white" /> // Changed color to white for contrast
+      <meshStandardMaterial color="black" />
     </mesh>
   );
 }
@@ -96,8 +94,8 @@ function Room() {
     setFocusOnLamp(!focusOnLamp);
     if (!focusOnLamp) {
       // Focus on lamp
-      camera.position.set(-2.8, 1.7, 1.8);
-      lampControlsRef.current.target.set(-1.3, 0, 2.3);
+      camera.position.set(0, 1.5, 3); // Adjusted camera position
+      lampControlsRef.current.target.set(0, 0, 0); // Set target to lamp position (center)
     } else {
       // Focus on room
       camera.position.set(0, 1.5, 5);
@@ -112,12 +110,12 @@ function Room() {
       <Text3D 
         text="Hello, I am Nischal and"
         position={[2.5, 2, 0]}
-        rotation={[0, -Math.PI / 2, 0]} // Changed rotation to face the opposite direction
+        rotation={[0, -Math.PI / 2, 0]}
       />
       <Text3D 
         text="This is my room."
         position={[2.5, 1.5, 0]}
-        rotation={[0, -Math.PI / 2, 0]} // Changed rotation to face the opposite direction
+        rotation={[0, -Math.PI / 2, 0]}
       />
       <OrbitControls
         ref={roomControlsRef}
@@ -132,7 +130,7 @@ function Room() {
       <OrbitControls
         ref={lampControlsRef}
         rotateSpeed={0.5}
-        target={[-1.3, 0, 2.3]} // Updated target to lamp position
+        target={[0, 0, 0]} // Set target to lamp position (center)
         minPolarAngle={0}
         maxPolarAngle={Math.PI}
         minDistance={0.5}
