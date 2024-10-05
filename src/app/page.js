@@ -93,9 +93,8 @@ function Room() {
   const toggleFocus = () => {
     setFocusOnLamp(!focusOnLamp);
     if (!focusOnLamp) {
-      // Focus on lamp
-      camera.position.set(0, 1.5, 3); // Adjusted camera position
-      lampControlsRef.current.target.set(0, 0, 0); // Set target to lamp position (center)
+      camera.position.set(0, 1.5, 3);
+      lampControlsRef.current.target.set(0, 0, 0);
     } else {
       // Focus on room
       camera.position.set(0, 1.5, 5);
