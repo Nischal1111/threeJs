@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useCallback, Suspense, useState, useEffect } from 'react';
-import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
+import { Canvas, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
@@ -20,22 +20,15 @@ function Lamp({ focusOnLamp }) {
   const lampRef = useRef();
 
   useEffect(() => {
-    if (lampRef.current) {
+    if (focusOnLamp) {
+      // Simply move the lamp into position (optional, based on your model)
       gsap.to(lampRef.current.position, {
-        x: -4.7,
+        x: -1.7,
         y: -1,
-        z: 2.5,
+        z: 1.5,
         duration: 1,
         ease: "power2.inOut"
       });
-
-      if (focusOnLamp) {
-        gsap.to(lampRef.current.rotation, {
-          y: Math.PI * 2,
-          duration: 2,
-          ease: "power2.inOut"
-        });
-      }
     }
   }, [focusOnLamp]);
 
@@ -146,7 +139,6 @@ function VideoWall() {
   );
 }
 
-
 function Room() {
   const roomControlsRef = useRef();
   const lampControlsRef = useRef();
@@ -195,45 +187,36 @@ function Room() {
   },
   [camera, focusOnLamp]
 );
+
   const toggleFocus = () => {
-  setFocusOnLamp((prevFocus) => !prevFocus);
+    setFocusOnLamp((prevFocus) => !prevFocus);
 
-  if (!focusOnLamp) {
-    // Transition to lamp view - moved camera back and up for better perspective
-    gsap.to(camera.position, {
-      x: -3.7,    // Moved slightly back from the lamp
-      y: 0,       // Lowered the camera height
-      z: 4.5,     // Increased distance from lamp
-      duration: 1.5,
-      ease: "power2.inOut",
-    });
-    gsap.to(lampControlsRef.current.target, {
-      x: -4.7,
-      y: -1,
-      z: 2.5,
-      duration: 1.5,
-      ease: "power2.inOut",
-    });
-  } else {
-    // Transition back to room view
-    gsap.to(camera.position, {
-      x: 0,
-      y: 1.5,
-      z: 5,
-      duration: 1.5,
-      ease: "power2.inOut",
-    });
-    gsap.to(roomControlsRef.current.target, {
-      x: 0,
-      y: 1.5,
-      z: 0,
-      duration: 1.5,
-      ease: "power2.inOut",
-    });
-  }
-};
-
-
+    if (!focusOnLamp) {
+      // Transition to lamp view (simple camera move near the lamp, keeping it inside the room)
+      gsap.to(camera.position, {
+        x: -4.0,    // Closer to the lamp, but staying inside the room
+        y: 1.2,     // Adjusted height for a good view
+        z: 3.5,     // Close to the lamp, inside the room
+        duration: 1.5,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          camera.updateProjectionMatrix();
+        }
+      });
+    } else {
+      // Transition back to room view
+      gsap.to(camera.position, {
+        x: 0,
+        y: 1.5,
+        z: 5,
+        duration: 1.5,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          camera.updateProjectionMatrix();
+        }
+      });
+    }
+  };
 
   return (
     <>
@@ -256,8 +239,8 @@ function Room() {
         target={[0, 1.5, 0]}
         minPolarAngle={Math.PI / 3.5}
         maxPolarAngle={Math.PI / 1.8}
-        minDistance={3} // Increased minimum distance for room zooming
-        maxDistance={6} // Reduced maximum distance
+        minDistance={3}
+        maxDistance={6}
         enabled={!focusOnLamp}
       />
 
@@ -267,8 +250,8 @@ function Room() {
         target={[-4.7, -1, 2.5]}
         minPolarAngle={Math.PI / 4}
         maxPolarAngle={Math.PI / 1.5}
-        minDistance={2.5} // Slightly increased minimum distance to prevent too close zoom
-        maxDistance={4}   // Reduced maximum distance to avoid zooming too far
+        minDistance={1.5}  // Reduced to allow closer inspection
+        maxDistance={3}    // Reduced to keep focus on the lamp
         enabled={focusOnLamp}
       />
 
@@ -313,7 +296,6 @@ function Room() {
   );
 }
 
-
 // Main Home component
 export default function Home() {
   return (
@@ -329,4 +311,4 @@ export default function Home() {
 
 // Preload models and video
 useGLTF.preload('/room/scene.gltf');
-useGLTF.preload('/lamp/scene.gltf');
+useGLTF.preload('/titanic_lamp/scene.gltf');
